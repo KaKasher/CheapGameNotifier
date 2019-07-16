@@ -1,6 +1,8 @@
 import requests
 import sqlite3
 from bs4 import BeautifulSoup
+from prettytable import from_db_cursor
+from os import system
 
 ALLKEYSHOPURL = 'allkeyshop.com/blog/'
 STEAMURL = 'store.steampowered.com/app/'
@@ -10,27 +12,29 @@ c = conn.cursor()
 
 
 def main():
+    username = input("input your username: ")
+    user_id = input('Input your user_id: ')
+    add_user(user_id, username)
     while True:
-        username = input("input your username: ")
-        add_user(username)
+        print('1. Add new game to watch list')
+        print('2. See your game list')
+        print('3. Exit')
+        user_input = input('Make selection: ')
+        if user_input == '1':
+            url = input('Paste in the url from allkeyshop/steam: ').strip()
+            wished_price = input('Input price that you are willing to pay in euro: ')
+            game_record = get_game_record(url)
+            add_game(game_record)
+            add_wish(user_id, wished_price, url)
+            system('cls')
+        if user_input == '2':
+            system('cls')
+            print_wishlist(get_wish_list(user_id))
+        if user_input == '3':
+            break
+        else:
+            pass
 
-        # print('1. Add new game to watch list  ')
-        # print('2. See your game list')
-        # user_input = input('Make selection: ')
-        # if user_input == '1':
-        #     url = input('Paste in the url from allkeyshop/steam: ')
-        #     #price_desired = input('Input a desired price in euro: ')
-        #     if get_game_record(url) not in GAMELIST:
-        #         GAMELIST.append(get_game_record(url))
-        # if user_input == '2':
-        #     for record in GAMELIST:
-        #         for value in record.values():
-        #             print(value, end=' ')
-        #         print(end='\n')
-
-
-
-#def update_price_desired(price_desired):
 
 def get_game_record(url):
     if ALLKEYSHOPURL.lower() in url.lower():
@@ -50,13 +54,47 @@ def get_game_record(url):
         price = price[:-2] + '.' + price[-2:]
         return {'title': title, 'merchant': 'steam', 'price': price, 'url': url}
 
-def add_user(username):
-    with conn:
-        c.execute("INSERT INTO users VALUES (NULL, :username)", {'username': username})
+
+# probably transform to a decorator when discord api is introduced
+def add_user(user_id, username):
+    try:
+        with conn:
+            c.execute("INSERT INTO users VALUES (:user_id, :username)", {'user_id': user_id,'username': username})
+    except sqlite3.IntegrityError:
+        pass
+
 
 def add_game(game_record):
+    try:
+        with conn:
+            c.execute("INSERT INTO games VALUES (:title, :merchant, :price, :url)", game_record)
+    except sqlite3.IntegrityError:
+        pass
+
+
+def add_wish(user_id, wished_price, url):
+    try:
+        with conn:
+            c.execute("INSERT INTO wishlist VALUES (:user_id, :wished_price, :url)",
+                      {'user_id': user_id, 'wished_price': wished_price, 'url': url})
+    except sqlite3.IntegrityError:
+        print('You already have that on your wishlist!')
+
+
+def get_wish_list(user_id):
     with conn:
-        c.execute("INSERT INTO games VALUES (:title, :merchant, :price, :url)", game_record)
+        return c.execute("""SELECT title, wished_price, price 
+        FROM wishlist, games 
+        WHERE user_id = :user_id AND wishlist.url = games.url""",
+                  {'user_id': user_id})
+
+        #return c.fetchall()
+
+
+def print_wishlist(wishlist):
+    data = from_db_cursor(wishlist)
+    print(data)
+
 
 
 if __name__ == '__main__':

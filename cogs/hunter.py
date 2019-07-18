@@ -12,6 +12,7 @@ STEAMURL = 'store.steampowered.com/app/'
 conn = sqlite3.connect('gamehunter.db')
 c = conn.cursor()
 
+
 class Hunter(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -56,20 +57,75 @@ class Hunter(commands.Cog):
         except sqlite3.IntegrityError:
             print('You already have that on your wishlist!')
 
+    def db_get_wish_list(self, user_id):
+        with conn:
+            return c.execute("""SELECT title, wished_price, price, merchant
+            FROM wishlist, games
+            WHERE user_id = :user_id AND wishlist.url = games.url""",
+                             {'user_id': user_id})
+
+            #return c.fetchall()
+
+    def db_update_game(self, game_record):
+        with conn:
+            c.execute("""UPDATE games 
+            SET title = :title, price = :price, merchant = :merchant 
+            WHERE url = :url""", game_record)
+
+    def db_get_game_record(self, url):
+        with conn:
+            c.execute("""SELECT * FROM games WHERE url = :url""", {'url': url})
+            record = c.fetchone()
+            if record is None:
+                return None
+            game_record = dict(zip(('title', 'merchant', 'price', 'url'), record))
+            return game_record
+
+    def db_get_all_game_urls(self):
+        with conn:
+            c.execute("""SELECT url FROM games""")
+            urls = c.fetchall()
+            gameUrlList = []
+            for url in urls:
+                gameUrlList.append(url[0])
+
+            return gameUrlList
+
+    def db_update_all_games(self, gameUrlList):
+        for url in gameUrlList:
+            game_record = self.get_game_record(url)
+            self.db_update_game(game_record)
+
 
 
     @commands.command()
     async def ping(self, ctx):
         await ctx.send(f'Pong! {round(self.bot.latency * 1000)}ms')
 
+    @commands.command(aliases=['w'])
+    async def wish(self, ctx, wished_price, *, url):
+        if self.db_get_game_record(url) is not None:
+            game_record = self.db_get_game_record(url)
+        else:
+            game_record = self.get_game_record(url)
+            self.db_add_game(game_record)
 
-    @commands.command()
-    async def addwish(self, ctx, wished_price, *, url):
-        game_record = self.get_game_record(url)
-        self.db_add_game(game_record)
-        self.db_add_user(ctx.author.id, ctx.author.name)
+        username = f'{ctx.author.name}#{ctx.author.discriminator}'
+        self.db_add_user(ctx.author.id, username)
         self.db_add_wish(ctx.author.id, wished_price, url)
         await ctx.send('Game added to wishlist!')
+
+    @commands.command(aliases=['wl'])
+    async def wishlist(self, ctx):
+        wishlist = self.db_get_wish_list(ctx.author.id)
+        data = from_db_cursor(wishlist)
+        await ctx.send(f"```{data}```")
+
+    @commands.command()
+    async def updateall(self, ctx):
+        gameUrlList = self.db_get_all_game_urls()
+        self.db_update_all_games(gameUrlList)
+        await ctx.send('All updated!')
 
 
 
@@ -153,7 +209,7 @@ def setup(bot):
 #         WHERE user_id = :user_id AND wishlist.url = games.url""",
 #                   {'user_id': user_id})
 #
-#         #return c.fetchall()
+#         return c.fetchall()
 #
 #
 # def print_wishlist(wishlist):

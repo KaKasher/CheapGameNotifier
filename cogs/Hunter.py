@@ -1,10 +1,12 @@
 import requests
 import sqlite3
 import discord
-from discord.ext import commands
+from discord.ext import tasks, commands
 from bs4 import BeautifulSoup
 from prettytable import from_db_cursor
 from os import system
+
+
 
 ALLKEYSHOPURL = 'allkeyshop.com/blog/'
 STEAMURL = 'store.steampowered.com/app/'
@@ -13,9 +15,11 @@ conn = sqlite3.connect('gamehunter.db')
 c = conn.cursor()
 
 
+
 class Hunter(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+
 
     def get_game_record(self, url):
         if ALLKEYSHOPURL.lower() in url.lower():
@@ -52,19 +56,25 @@ class Hunter(commands.Cog):
     def db_add_wish(self, user_id, wished_price, url):
         try:
             with conn:
-                c.execute("INSERT INTO wishlist VALUES (:user_id, :wished_price, :url)",
+                c.execute("INSERT INTO wishlist VALUES (:user_id, :wished_price, :url, 0)",
                           {'user_id': user_id, 'wished_price': wished_price, 'url': url})
         except sqlite3.IntegrityError:
             print('You already have that on your wishlist!')
 
-    def db_get_wish_list(self, user_id):
+    def db_get_user_wish_table(self, user_id):
         with conn:
             return c.execute("""SELECT title, wished_price, price, merchant
             FROM wishlist, games
             WHERE user_id = :user_id AND wishlist.url = games.url""",
                              {'user_id': user_id})
 
-            #return c.fetchall()
+
+    def db_get_user_wish_list(self, user_id):
+        with conn:
+            c.execute("""SELECT * FROM wishlist WHERE user_id = :user_id""",
+                             {'user_id': user_id})
+
+            return c.fetchall()
 
     def db_update_game(self, game_record):
         with conn:
@@ -96,6 +106,24 @@ class Hunter(commands.Cog):
             game_record = self.get_game_record(url)
             self.db_update_game(game_record)
 
+    def db_get_all_user_id(self):
+        with conn:
+            c.execute("""SELECT user_id FROM users""")
+            users = c.fetchall()
+            user_id_list = []
+            for user in users:
+                user_id_list.append(user[0])
+
+            return user_id_list
+
+    def db_set_notified(self, user_id, url, notified=False):
+        with conn:
+            c.execute("""UPDATE wishlist 
+            SET notified = :notified 
+            WHERE user_id = :user_id AND url = :url""",
+                      {'notified': notified, 'user_id': user_id, 'url': url})
+
+
 
 
     @commands.command()
@@ -104,8 +132,9 @@ class Hunter(commands.Cog):
 
     @commands.command(aliases=['w'])
     async def wish(self, ctx, wished_price, *, url):
+        # If the game is in games table, don't add it
         if self.db_get_game_record(url) is not None:
-            game_record = self.db_get_game_record(url)
+            pass
         else:
             game_record = self.get_game_record(url)
             self.db_add_game(game_record)
@@ -117,15 +146,9 @@ class Hunter(commands.Cog):
 
     @commands.command(aliases=['wl'])
     async def wishlist(self, ctx):
-        wishlist = self.db_get_wish_list(ctx.author.id)
+        wishlist = self.db_get_user_wish_table(ctx.author.id)
         data = from_db_cursor(wishlist)
         await ctx.send(f"```{data}```")
-
-    @commands.command()
-    async def updateall(self, ctx):
-        gameUrlList = self.db_get_all_game_urls()
-        self.db_update_all_games(gameUrlList)
-        await ctx.send('All updated!')
 
 
 

@@ -11,7 +11,9 @@ bot = commands.Bot(command_prefix='.')
 
 @bot.event
 async def on_ready():
+    refresh_games_notify_users.start()
     print('Bot is online.')
+
 
 
 
@@ -65,8 +67,7 @@ async def refresh_games_notify_users():
                 print('after fetch')
                 await user.send(embed=embed)
 
+                was_notified = 1
                 hunter.db_set_notified(user_id, url, was_notified)
-
-refresh_games_notify_users.start()
 
 bot.run(TOKEN)

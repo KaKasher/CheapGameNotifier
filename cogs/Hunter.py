@@ -123,6 +123,12 @@ class Hunter(commands.Cog):
             WHERE user_id = :user_id AND url = :url""",
                       {'notified': notified, 'user_id': user_id, 'url': url})
 
+    def db_del_wish_command(self, user_id, title):
+        with conn:
+            c.execute("""DELETE FROM wishlist
+            WHERE wishlist.url IN (SELECT games.url FROM games WHERE LOWER(games.title) = LOWER(:title)) 
+            AND user_id = :user_id""",
+                      {'title': title, 'user_id': user_id})
 
 
 
@@ -145,10 +151,27 @@ class Hunter(commands.Cog):
         await ctx.send('Game added to wishlist!')
 
     @commands.command(aliases=['wl'])
-    async def wishlist(self, ctx):
-        wishlist = self.db_get_user_wish_table(ctx.author.id)
+    async def wishlist(self, ctx, member: discord.Member = None):
+        if member is None:
+            wishlist = self.db_get_user_wish_table(ctx.author.id)
+        else:
+            wishlist = self.db_get_user_wish_table(member.id)
         data = from_db_cursor(wishlist)
         await ctx.send(f"```{data}```")
+
+
+
+    @commands.command(aliases=['d', 'del'])
+    async def delete(self, ctx, *, title):
+        self.db_del_wish_command(ctx.author.id, title)
+        await ctx.send('Wish deleted!')
+
+    @commands.command()
+    async def prank(self, ctx, member: discord.Member):
+        if member.id == 304658956750422019:
+            await ctx.send('A bana chcesz?')
+            return
+        await member.move_to(None)
 
 
 

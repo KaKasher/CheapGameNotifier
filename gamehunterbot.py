@@ -40,7 +40,7 @@ hunter = bot.get_cog('Hunter')
 
 @tasks.loop(minutes=10)
 async def refresh_games_notify_users():
-    print('loop started')
+    # print('loop started')
     # game_url_list = hunter.db_get_all_game_urls()
     # hunter.db_update_all_games(game_url_list)
     # print('Game list has been updated!')
@@ -55,16 +55,12 @@ async def refresh_games_notify_users():
             merchant = game_record['merchant']
             actual_price = game_record['price']
 
-            print(wished_price, actual_price, was_notified, actual_price <= wished_price and was_notified is False)
             if actual_price <= wished_price and was_notified == 0:
-                print('in if')
                 embed = discord.Embed(title=title, url=url, description="Price of the game has dropped!")
                 embed.set_author(name="Your wish came true!")
                 embed.add_field(name=merchant, value=actual_price, inline=True)
-                print('after embed')
 
                 user = await bot.fetch_user(user_id)
-                print('after fetch')
                 await user.send(embed=embed)
 
                 was_notified = 1

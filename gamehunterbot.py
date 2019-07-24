@@ -40,10 +40,10 @@ hunter = bot.get_cog('Hunter')
 
 @tasks.loop(minutes=10)
 async def refresh_games_notify_users():
-    # print('loop started')
-    # game_url_list = hunter.db_get_all_game_urls()
-    # hunter.db_update_all_games(game_url_list)
-    # print('Game list has been updated!')
+    print('loop started')
+    game_url_list = hunter.db_get_all_game_urls()
+    hunter.db_update_all_games(game_url_list)
+    print('Game list has been updated!')
     user_id_list = hunter.db_get_all_user_id()
 
     for user_id in user_id_list:

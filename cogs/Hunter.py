@@ -158,7 +158,7 @@ class Hunter(commands.Cog):
 
 
     @commands.command(aliases=['w'])
-    async def wish(self, ctx, wished_price, *, url_or_title):
+    async def wish(self, ctx, wished_price: float, *, url_or_title):
         # When the input is not an url, search database for a given title
         if url_or_title.lower().startswith('http') is False:
             record = self.db_get_game_record(title=url_or_title.strip())
@@ -202,13 +202,31 @@ class Hunter(commands.Cog):
     async def prank(self, ctx, member: discord.Member):
         if member.id == 304658956750422019:
             await ctx.send('A bana chcesz?')
+            await ctx.author.move_to(None)
             return
         await member.move_to(None)
+
 
     @commands.command(aliases=['u'])
     async def update(self, ctx, wished_price, *, title):
         self.db_update_wish_command(ctx.author.id, wished_price, title)
         await ctx.send('Wish updated!')
+
+    @commands.Cog.listener()
+    async def on_command_error(self, ctx, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            await ctx.send('An argument is missing.')
+        elif isinstance(error, commands.CommandNotFound):
+            await ctx.send('Command not found')
+        else:
+            raise error
+
+    @wish.error
+    async def wish_error(self, ctx, error):
+        if isinstance(error, commands.BadArgument):
+            await ctx.send('Second argument should be your price')
+
+        await ctx.send('Example: `.wish 12.5 Battlefield 4/URL`')
 
 
 

@@ -1,4 +1,5 @@
 import requests
+import asyncio
 import sqlite3
 import discord
 from discord.ext import tasks, commands
@@ -127,11 +128,12 @@ class Hunter(commands.Cog):
             return gameUrlList
 
     # Updates all the game records in games table
-    def db_update_all_games(self, gameUrlList):
+    async def db_update_all_games(self, gameUrlList):
         for url in gameUrlList:
             game_record = self.get_game_record(url)
             self.db_update_game(game_record)
             print('Game updated:', game_record)
+            await asyncio.sleep(1)
 
     # Returns all of the user id's from the users table
     def db_get_all_user_id(self):

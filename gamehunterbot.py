@@ -6,7 +6,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 TOKEN = os.environ.get('DISCORD_TOKEN')
-bot = commands.Bot(command_prefix='.', case_insensitive=True, help_command=None)
+bot = commands.Bot(command_prefix=('.', 'gh! ', 'gh!'), case_insensitive=True, help_command=None)
 
 for filename in os.listdir('./cogs'):
     if filename.endswith('.py'):
@@ -101,7 +101,7 @@ async def help(ctx, command=None):
 @tasks.loop(hours=1)
 async def refresh_games_notify_users():
     game_url_list = hunter.db_get_all_game_urls()
-    hunter.db_update_all_games(game_url_list)
+    await hunter.db_update_all_games(game_url_list)
     user_id_list = hunter.db_get_all_user_id()
 
     for user_id in user_id_list:

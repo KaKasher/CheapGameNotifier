@@ -112,16 +112,17 @@ async def refresh_games_notify_users():
             title = game_record['title']
             merchant = game_record['merchant']
             actual_price = game_record['price']
+            merchant_url = hunter.db_get_merchant_url(url)
+
 
             if actual_price <= wished_price and was_notified == 0:
-                embed = discord.Embed(title=title, url=url, description="Price of the game has dropped!")
+                embed = discord.Embed(title=title, url=merchant_url, description="Price of the game has dropped!")
                 embed.set_author(name="Your wish came true!")
                 embed.add_field(name=merchant, value=actual_price, inline=True)
-
                 user = await bot.fetch_user(user_id)
                 await user.send(embed=embed)
-
                 was_notified = 1
                 hunter.db_set_notified(user_id, url, was_notified)
+
 
 bot.run(TOKEN)
